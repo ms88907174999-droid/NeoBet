@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Signup</title>
+  <style>
+    * {margin:0; padding:0; box-sizing:border-box; font-family: 'Poppins', sans-serif;}
+    body {
+      height:100vh; display:flex; justify-content:center; align-items:center;
+      background: radial-gradient(circle at top, #0f0f0f, #000);
+      color:#fff; overflow:hidden;
+    }
+    .container {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      padding:40px; border-radius:20px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.4);
+      width:350px; transition: all .3s;
+    }
+    .container:hover { transform: rotateY(5deg) rotateX(3deg); box-shadow: 0 0 30px cyan; }
+    h2 {text-align:center; margin-bottom:20px;}
+    input {
+      width:100%; padding:10px; margin:10px 0;
+      border:none; border-radius:10px; outline:none;
+    }
+    button {
+      width:100%; padding:10px; border:none;
+      border-radius:10px; background:cyan; color:#000;
+      font-weight:bold; cursor:pointer; transition:.3s;
+    }
+    button:hover {background:#00e0e0; transform:scale(1.05);}
+    .switch {text-align:center; margin-top:10px; cursor:pointer; color:cyan;}
+  </style>
+</head>
+<body>
+  <div class="container" id="login-box">
+    <h2 id="form-title">Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="auth-btn">Login</button>
+    <div class="switch" id="switch-mode">Don't have an account? Signup</div>
+  </div>
+
+  <script type="module">
+    // Firebase Config
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyBU-ofr7FSUZfwcTkuI1EOKclkHRAa97_M",
+  authDomain: "colourtrade-2c9a7.firebaseapp.com",
+  projectId: "colourtrade-2c9a7",
+  storageBucket: "colourtrade-2c9a7.firebasestorage.app",
+  messagingSenderId: "855323021567",
+  appId: "1:855323021567:web:779cd9c911d4b008effcca",
+  measurementId: "G-B04CCGG5TH"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const authBtn = document.getElementById("auth-btn");
+    const switchMode = document.getElementById("switch-mode");
+    const formTitle = document.getElementById("form-title");
+
+    let mode = "login";
+
+    switchMode.addEventListener("click", () => {
+      if (mode === "login") {
+        mode = "signup";
+        formTitle.innerText = "Signup";
+        authBtn.innerText = "Signup";
+        switchMode.innerText = "Already have an account? Login";
+      } else {
+        mode = "login";
+        formTitle.innerText = "Login";
+        authBtn.innerText = "Login";
+        switchMode.innerText = "Don't have an account? Signup";
+      }
+    });
+
+    authBtn.addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        if (mode === "signup") {
+          await createUserWithEmailAndPassword(auth, email, password);
+          alert("Signup Successful! Please login.");
+          mode = "login";
+          formTitle.innerText = "Login";
+          authBtn.innerText = "Login";
+          switchMode.innerText = "Don't have an account? Signup";
+        } else {
+          await signInWithEmailAndPassword(auth, email, password);
+
+          // ✅ Admin Login
+          if (email === "superman@sharmaji.com" && password === "superman1") {
+            window.location.href = "admin.html";
+          } else {
+            window.location.href = "dashboard.html";
+          }
+        }
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+  </script>
+</body>
+</html>

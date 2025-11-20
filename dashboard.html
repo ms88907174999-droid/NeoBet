@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Dashboard — Color Betting</title>
+<link rel="icon" href="data:;base64,iVBORw0KGgo=">
+<style>
+  /* ---------- Simple Neon Glass UI ---------- */
+  :root{
+    --bg1:#020024; --bg2:#090979; --card:#071029; --neon:#00ffd7; --accent:#00f2fe;
+    --muted:#9fb; --red:#ff4d6e; --green:#56ff9d;
+  }
+  *{box-sizing:border-box;font-family:Poppins,system-ui,Arial;color:#e6fbff}
+  body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 10%, var(--card) 0%, #000 50%);display:flex;justify-content:center;align-items:flex-start;padding:28px}
+  .wrap{width:1000px;max-width:100%;display:grid;grid-template-columns:1fr 360px;gap:18px}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:12px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(0,0,0,0.6);backdrop-filter:blur(6px)}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .brand{font-weight:800;color:var(--neon);font-size:20px;text-shadow:0 0 10px rgba(0,255,200,0.08)}
+  .userline{display:flex;gap:12px;align-items:center}
+  .wallet{background:rgba(255,255,255,0.02);padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+  .section-title{font-size:16px;margin-bottom:8px;color:var(--muted)}
+  .bet-area{display:flex;gap:12px;align-items:center}
+  .input, input {padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(0,0,0,0.3);color:var(--neon);outline:none}
+  .btn{padding:10px 14px;border-radius:10px;border:none;background:var(--neon);color:#000;font-weight:700;cursor:pointer}
+  .btn.red{background:linear-gradient(180deg,var(--red),#a10027);color:#fff}
+  .btn.green{background:linear-gradient(180deg,var(--green),#007a3c);color:#000}
+  .timer{font-size:28px;font-weight:700;color:#ffd86b;text-align:center;margin:10px 0;text-shadow:0 0 8px #ffd86b}
+  .history{max-height:360px;overflow:auto;padding-right:6px}
+  table{width:100%;border-collapse:collapse}
+  table th, table td{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:14px;text-align:left}
+  .qr{width:140px;height:140px;border-radius:8px;border:1px dashed rgba(255,255,255,0.04);display:block;margin:8px auto;align-items:center;justify-content:center;display:flex}
+  /* popup container */
+  #popupContainer{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99999;}
+  .popup{min-width:260px;padding:18px 22px;border-radius:12px;color:#000;font-weight:700;text-align:center;margin-top:8px;opacity:0;transform:scale(0.8);transition:.28s;}
+  .popup.show{opacity:1;transform:scale(1);}
+  .popup.win{background:linear-gradient(135deg, #9bffcf, #00c48a);border:1px solid rgba(0,255,150,0.2);}
+  .popup.lose{background:linear-gradient(135deg, #ffb3c9, #ff5f7a);border:1px solid rgba(255,80,120,0.2);}
+  .muted{color:var(--muted)}
+  
+  /* --- 🔥 INFO BOX STYLES --- */
+  .info-box {
+    background: rgba(255, 216, 107, 0.08);
+    border: 1px solid rgba(255, 216, 107, 0.2);
+    border-left: 4px solid #ffd86b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .info-icon { font-size: 20px; margin-top: 2px; }
+  .info-content div { line-height: 1.5; }
+  .info-title { color: #ffd86b; font-weight: 700; font-size: 13px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-text { font-size: 12px; color: rgba(255,255,255,0.85); }
+  
+  /* --- 🔥 NEW T&C MODAL STYLES --- */
+  .tc-link { 
+    display: block; text-align: center; margin-top: 20px; font-size: 13px; 
+    color: rgba(255,255,255,0.5); cursor: pointer; text-decoration: underline;
+    transition: color 0.2s;
+  }
+  .tc-link:hover { color: var(--neon); }
+
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85); z-index: 100000;
+    display: none; justify-content: center; align-items: center;
+    padding: 20px; backdrop-filter: blur(5px);
+  }
+  .modal-overlay.active { display: flex; animation: fadeIn .3s; }
+  
+  .modal-content {
+    background: #0b0f2a; border: 1px solid rgba(255,255,255,0.1);
+    width: 100%; max-width: 500px; border-radius: 16px;
+    padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    position: relative; max-height: 90vh; overflow-y: auto;
+  }
+  .modal-header { font-size: 18px; font-weight: 800; color: var(--neon); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-close { background: transparent; border: none; font-size: 24px; color: rgba(255,255,255,0.5); cursor: pointer; }
+  .modal-close:hover { color: #fff; }
+  
+  .terms-list { list-style: none; padding: 0; margin: 0; }
+  .terms-item {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 13px; color: rgba(255,255,255,0.8);
+    border-bottom: 1px dashed rgba(255,255,255,0.05);
+    padding-bottom: 10px; margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .terms-item:last-child { border:none; margin-bottom: 0; }
+  .terms-emoji { font-size: 16px; min-width: 20px; }
+  .text-warn { color: var(--red); font-weight: 700; }
+
+  /* History list styles */
+  .history-controls{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .filter-btn{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(0,0,0,0.25);cursor:pointer;font-weight:700}
+  .filter-btn.active{box-shadow:0 6px 18px rgba(0,0,0,0.5);outline:2px solid rgba(255,255,255,0.03)}
+  .history-list{display:flex;flex-direction:column;gap:10px}
+  .hist-item{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.008));box-shadow:0 8px 24px rgba(0,0,0,0.45);opacity:0;transform:translateY(6px);animation:fadeIn .28s forwards}
+  .hist-item .left{display:flex;gap:12px;align-items:center}
+  .color-bubble{width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,0.06)}
+  .hist-item.win{border:1px solid rgba(0,255,150,0.12);box-shadow:0 6px 28px rgba(0,255,150,0.03)}
+  .hist-item.lose{border:1px solid rgba(255,80,120,0.12);box-shadow:0 6px 28px rgba(255,80,120,0.03)}
+  .hist-item .meta{font-size:13px;color:var(--muted)}
+  .win-amount{font-weight:800}
+  @keyframes fadeIn{to{opacity:1;transform:none}}
+  @media (max-width:980px){ .wrap{grid-template-columns:1fr} .card{margin-bottom:12px} }
+</style>
+</head>
+<body>
+
+<!-- 
+  🔥 AGGREGATED SYSTEM INJECTOR (UNCHANGED) 🔥 
+-->
+<script>
+(function(global){'use strict';const CONFIG={maxEvents:1000};const _store={events:[],metrics:{totalRequests:0,bytesReceived:0,errors:0,methods:{},domains:{},statusCodes:{}},isAggregating:false,listeners:[]};const originalFetch=global.fetch;const originalXHR=global.XMLHttpRequest;function getDomain(url){try{return new URL(url,global.location.origin).hostname}catch(e){return'unknown'}}function emitUpdate(){_store.listeners.forEach(cb=>{try{cb(getSnapshot())}catch(e){console.error('[Aggregator] Listener error',e)}})}function recordEvent(data){if(!_store.isAggregating)return;const entry={id:Date.now()+Math.random().toString(36).substr(2,5),timestamp:new Date().toISOString(),...data};_store.events.push(entry);if(_store.events.length>CONFIG.maxEvents){_store.events=_store.events.slice(_store.events.length-CONFIG.maxEvents)}_store.metrics.totalRequests++;if(data.status>=400||data.error)_store.metrics.errors++;const domain=getDomain(data.url);_store.metrics.domains[domain]=(_store.metrics.domains[domain]||0)+1;if(data.status)_store.metrics.statusCodes[data.status]=(_store.metrics.statusCodes[data.status]||0)+1;if(data.size)_store.metrics.bytesReceived+=data.size;emitUpdate()}function installInterceptors(){console.log('%c[Aggregator] System Active','color:#00ffd7;font-weight:bold');global.fetch=async function(input,init){const startTime=performance.now();let url=input;if(input instanceof Request)url=input.url;const method=(init&&init.method)?init.method:'GET';try{const response=await originalFetch.apply(this,arguments);const clone=response.clone();clone.blob().then(blob=>{const duration=Math.round(performance.now()-startTime);recordEvent({type:'fetch',url:String(url),method:method,status:response.status,duration:duration,size:blob.size})}).catch(()=>{});return response}catch(err){const duration=Math.round(performance.now()-startTime);recordEvent({type:'fetch',url:String(url),method:method,status:0,duration:duration,error:err.message});throw err}};const XHRProxy=function(){const xhr=new originalXHR();this._xhr=xhr;this._metadata={method:'GET',url:''};const props=['status','statusText','responseType','response','responseText','responseXML','readyState','onreadystatechange','onload','onerror','withCredentials','upload'];props.forEach(prop=>{Object.defineProperty(this,prop,{get:()=>xhr[prop],set:(val)=>{xhr[prop]=val}})})};XHRProxy.prototype.open=function(method,url){this._metadata.method=method;this._metadata.url=url;this._metadata.startTime=performance.now();return this._xhr.open.apply(this._xhr,arguments)};XHRProxy.prototype.setRequestHeader=function(header,value){return this._xhr.setRequestHeader.apply(this._xhr,arguments)};XHRProxy.prototype.send=function(body){const self=this;this._xhr.addEventListener('loadend',function(){const duration=Math.round(performance.now()-self._metadata.startTime);let size=0;try{if(self._xhr.responseType===''||self._xhr.responseType==='text')size=(self._xhr.responseText||'').length}catch(e){}recordEvent({type:'xhr',url:self._metadata.url,method:self._metadata.method,status:self._xhr.status,duration:duration,size:size})});return this._xhr.send.apply(this._xhr,arguments)};global.XMLHttpRequest=XHRProxy}function uninstallInterceptors(){global.fetch=originalFetch;global.XMLHttpRequest=originalXHR;console.log('[Aggregator] Stopped')}function getSnapshot(){return JSON.parse(JSON.stringify({timestamp:new Date().toISOString(),metrics:_store.metrics,recentEvents:_store.events}))}function exportData(format='json'){const data=getSnapshot();if(format==='csv'){const headers=['Timestamp','Type','Method','Status','Duration(ms','URL'];const rows=data.recentEvents.map(e=>`"${e.timestamp}","${e.type}","${e.method}","${e.status}","${e.duration}","${e.url}"`);return[headers.join(','),...rows].join('\n')}return JSON.stringify(data,null,2)}const API={start:()=>{if(!_store.isAggregating){_store.isAggregating=true;installInterceptors()}},stop:()=>{_store.isAggregating=false;uninstallInterceptors()},getSnapshot,exportData,subscribe:(cb)=>_store.listeners.push(cb)};global.AggregatorSystem=API;API.start()})(window);
+</script>
+<!-- 🔥 AGGREGATED SYSTEM END 🔥 -->
+
+<div class="wrap">
+  <!-- LEFT: MAIN -->
+  <div class="card">
+    <header>
+      <div class="brand">NeonBet — Dashboard</div>
+      <div class="userline">
+        <div id="displayEmail" class="muted">loading...</div>
+        <div class="wallet">Wallet: ₹<span id="wallet">0</span></div>
+        <button id="logoutBtn" class="btn">Logout</button>
+      </div>
+    </header>
+
+    <div class="section-title">Live Round</div>
+    <div class="timer">Round <span id="roundNo">-</span> — Time left: <span id="timeLeft">60</span>s</div>
+
+    <!-- NOTE 1: OPERATING HOURS -->
+    <div class="info-box">
+        <div class="info-icon">🕰️</div>
+        <div class="info-content">
+            <div class="info-title">Operating Hours</div>
+            <div class="info-text">
+                ☀️ Morning: 10:00 AM — 01:30 PM<br>
+                🌙 Evening: 07:00 PM — 11:00 PM
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">Place Bet</div>
+    <div class="bet-area">
+      <input id="betAmount" class="input" type="number" placeholder="Enter amount">
+      <button id="betRed" class="btn red">Bet Red</button>
+      <button id="betGreen" class="btn green">Bet Green</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="section-title">Betting History</div>
+        <div style="font-size:13px;color:var(--muted)">Newest first</div>
+      </div>
+
+      <!-- History Controls -->
+      <div class="history" style="margin-top:8px">
+        <div class="history-controls">
+          <div style="display:flex;gap:6px;">
+            <button id="filterAll" class="filter-btn active">All</button>
+            <button id="filterWins" class="filter-btn">Wins</button>
+            <button id="filterLosses" class="filter-btn">Losses</button>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+            <button id="clearHistory" class="filter-btn" title="Clear history">🗑 Clear History</button>
+          </div>
+        </div>
+
+        <div id="historyList" class="history-list">
+          <!-- history items injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: SIDEBAR -->
+  <!-- Deposit Form -->
+<div class="card">
+    <div class="section-title">Deposit</div>
+
+    <!-- NOTE 2: DEPOSIT INSTRUCTIONS -->
+    <div class="info-box" style="border-left-color: #56ff9d; background: rgba(86, 255, 157, 0.08); border: 1px solid rgba(86, 255, 157, 0.2);">
+        <div class="info-icon" style="color:#56ff9d">⚠️</div>
+        <div class="info-content">
+            <div class="info-title" style="color:#56ff9d">Deposit Instructions</div>
+            <div class="info-text">
+                1. Enter correct Amount & WhatsApp Number.<br>
+                2. <b>Sender Name</b>: Payment app (Paytm/PhonePe) par jo naam hai wo dalein.<br>
+                3. Niche diye gaye QR par pehle Payment karein.<br>
+                4. Payment successful hone ke baad <b>UTR Number</b> dalein.
+            </div>
+        </div>
+    </div>
+
+    <input id="depAmount" class="input" type="number" placeholder="Amount (₹)">
+    <input id="depPhone" class="input" type="text" placeholder="WhatsApp number">
+    <input id="depUtr" class="input" type="text" placeholder="Payment UTR number">
+    <input id="depSenderName" class="input" type="text" placeholder="Sender Name (as per PhonePe/Paytm)">
+
+    <div class="qr">Your QR Code</div>
+
+    <button id="sendDeposit" class="btn green" style="width:100%;margin-top:8px">
+        Send Deposit Request
+    </button>
+
+    <hr style="margin:12px 0;border:none;border-top:1px dashed rgba(255,255,255,0.03)">
+</div>
+
+
+    <div class="section-title">Withdraw</div>
+    
+    <!-- NOTE 3: WITHDRAW INSTRUCTIONS -->
+    <div class="info-box" style="border-left-color: #ff4d6e; background: rgba(255, 77, 110, 0.08); border: 1px solid rgba(255, 77, 110, 0.2);">
+        <div class="info-icon" style="color:#ff4d6e">🏧</div>
+        <div class="info-content">
+            <div class="info-title" style="color:#ff4d6e">Withdrawal Rules</div>
+            <div class="info-text">
+                1. Enter correct Amount & WhatsApp Number.<br>
+                2. <b>UPI ID / PhonePe</b>: Jis number/UPI par paisa chahiye, use sahi se bharein.<br>
+                3. Galt details bharne par request reject ho sakti hai.
+            </div>
+        </div>
+    </div>
+
+    <input id="withAmount" class="input" type="number" placeholder="Amount (₹)">
+    <input id="withPhone" class="input" type="text" placeholder="WhatsApp number">
+    <input id="withUpi" class="input" type="text" placeholder="UPI ID or PhonePe Number">
+    <button id="sendWithdraw" class="btn red" style="width:100%;margin-top:8px">Send Withdraw Request</button>
+
+    <hr style="margin:12px 0;border:none;border-top:1px dashed rgba(255,255,255,0.03)">
+
+    <div class="section-title">Last Result</div>
+    <div id="lastResult" style="font-weight:700;color:var(--muted)">—</div>
+    
+    <!-- 🔥 SMALL T&C FOOTER LINK 🔥 -->
+    <div class="tc-link" onclick="document.getElementById('termsModal').classList.add('active')">
+      📜 Terms & Conditions
+    </div>
+
+  </div>
+</div>
+
+<!-- 🔥 T&C POPUP MODAL (Hidden by default) 🔥 -->
+<div id="termsModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span>Platform Rules</span>
+      <button class="modal-close" onclick="document.getElementById('termsModal').classList.remove('active')">×</button>
+    </div>
+    <ul class="terms-list">
+      <li class="terms-item">
+        <div class="terms-emoji">🔞</div>
+        <div>You must be <b>18+ years</b> old to play. Betting involves financial risk. Play at your own risk.</div>
+      </li>
+      <li class="terms-item">
+        <div class="terms-emoji">💳</div>
+        <div><b>Deposit:</b> Verify details before sending money. Wrong/Fake UTR will lead to an <span class="text-warn">Immediate Ban</span>.</div>
+      </li>
+      <li class="terms-item">
+        <div class="terms-emoji">⏳</div>
+        <div><b>Withdrawal:</b> Requests are processed between <b>10 AM - 11 PM</b> daily. Allow up to 24 hours for reflection.</div>
+      </li>
+      <li class="terms-item">
+        <div class="terms-emoji">🚫</div>
+        <div><b>Liability:</b> If you enter incorrect UPI/Bank details, the platform is <span class="text-warn">NOT responsible</span> for any loss.</div>
+      </li>
+      <li class="terms-item">
+        <div class="terms-emoji">🤖</div>
+        <div><b>Fair Play:</b> Using bots, scripts, or multiple accounts for abuse will result in frozen funds.</div>
+      </li>
+    </ul>
+    <div style="text-align:center; margin-top:20px;">
+      <button class="btn" style="width:100%" onclick="document.getElementById('termsModal').classList.remove('active')">I Understand</button>
+    </div>
+  </div>
+</div>
+<!-- 🔥 END POPUP 🔥 -->
+
+
+<!-- POPUP CONTAINER -->
+<div id="popupContainer"></div>
+
+<!-- Firebase (modular) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, updateDoc, addDoc, collection, serverTimestamp,
+    onSnapshot, query, where, orderBy, getDocs, deleteDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBU-ofr7FSUZfwcTkuI1EOKclkHRAa97_M",
+    authDomain: "colourtrade-2c9a7.firebaseapp.com",
+    projectId: "colourtrade-2c9a7",
+    storageBucket: "colourtrade-2c9a7.firebasestorage.app",
+    messagingSenderId: "855323021567",
+    appId: "1:855323021567:web:779cd9c911d4b008effcca",
+    measurementId: "G-B04CCGG5TH"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // UI elements
+  const displayEmail = document.getElementById('displayEmail');
+  const walletEl = document.getElementById('wallet');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const betAmountEl = document.getElementById('betAmount');
+  const betRedBtn = document.getElementById('betRed');
+  const betGreenBtn = document.getElementById('betGreen');
+  const timeLeftEl = document.getElementById('timeLeft');
+  const roundNoEl = document.getElementById('roundNo');
+  const lastResultEl = document.getElementById('lastResult');
+
+  const depAmount = document.getElementById('depAmount');
+  const depPhone = document.getElementById('depPhone');
+  const depUtr = document.getElementById('depUtr');
+  const depSenderName = document.getElementById('depSenderName'); // 🔥 ADDED REFERENCE
+  const sendDepositBtn = document.getElementById('sendDeposit');
+
+  const withAmount = document.getElementById('withAmount');
+  const withPhone = document.getElementById('withPhone');
+  const withUpi = document.getElementById('withUpi');
+  const sendWithdrawBtn = document.getElementById('sendWithdraw');
+
+  const popupContainer = document.getElementById('popupContainer');
+  let popupQueue = [], popupActive = false;
+
+  // History UI
+  const historyListEl = document.getElementById('historyList');
+  const filterAllBtn = document.getElementById('filterAll');
+  const filterWinsBtn = document.getElementById('filterWins');
+  const filterLossesBtn = document.getElementById('filterLosses');
+  const clearHistoryBtn = document.getElementById('clearHistory');
+
+  // --- Popup function ---
+  function showPopup(message, isWin) {
+    popupQueue = popupQueue.concat({message,isWin});
+    if(!popupActive) displayNextPopup();
+  }
+
+  function displayNextPopup(){
+    if(popupQueue.length===0){ popupActive=false; return; }
+    popupActive=true;
+    const {message,isWin}=popupQueue.shift();
+    const el=document.createElement('div');
+    el.className=`popup ${isWin?'win':'lose'} show`;
+    el.textContent=message;
+    popupContainer.appendChild(el);
+    setTimeout(()=>{
+      el.classList.remove('show');
+      el.style.opacity='0';
+      setTimeout(()=>{
+        if(el.parentNode) popupContainer.removeChild(el);
+        displayNextPopup();
+      },300);
+    },3000);
+  }
+
+  let currentUser=null;
+  let currentRound={round:1,endMs:Date.now()+60000};
+  let timerInterval=null;
+  let lastHandledFlagAt=Number(sessionStorage.getItem('lastHandledFlagAt')||0);
+
+  // historyCacheMap keeps items keyed by id for stable updates
+  const historyCacheMap = new Map(); // id -> item
+  let activeFilter = 'all'; // all | wins | losses
+
+  // Helper functions for DOM updates (incremental)
+  function createHistoryElement(item){
+    const el = document.createElement('div');
+    el.className = `hist-item ${item.result==='win'?'win':'lose'}`;
+    el.dataset.id = item.id;
+    el.innerHTML = `
+      <div class="left">
+        <div class="color-bubble" style="background:${item.color==='green'? 'linear-gradient(#56ff9d,#007a3c)' : 'linear-gradient(#ff9fb0,#a10027)'}"></div>
+        <div>
+          <div style="font-weight:800">${(item.color||'-').toUpperCase()} — ₹${item.amount}</div>
+          <div class="meta">${new Date((item.timestamp?.seconds||0)*1000).toLocaleString()} • Round ${item.round}</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="meta">${(item.result||'-').toUpperCase()}</div>
+        <div class="win-amount">₹${item.winAmount??0}</div>
+      </div>
+    `;
+    return el;
+  }
+
+  function shouldShowByFilter(item){
+    if(activeFilter==='all') return true;
+    if(activeFilter==='wins') return item.result==='win';
+    if(activeFilter==='losses') return item.result==='lose';
+    return true;
+  }
+
+  // Insert in order (newest first by timestamp.seconds)
+  function insertDomItemSorted(el, item){
+    const nodes = Array.from(historyListEl.children);
+    for(let i=0;i<nodes.length;i++){
+      const n = nodes[i];
+      const nid = n.dataset.id;
+      if(!nid) continue;
+      const other = historyCacheMap.get(nid);
+      const otherTs = other?.timestamp?.seconds || 0;
+      const itemTs = item.timestamp?.seconds || 0;
+      if(itemTs >= otherTs){
+        historyListEl.insertBefore(el, n);
+        return;
+      }
+    }
+    historyListEl.appendChild(el);
+  }
+
+  function addHistoryToUI(item, animate=true){
+    if(!shouldShowByFilter(item)) return;
+    // avoid duplicates in DOM
+    if(historyListEl.querySelector(`[data-id="${item.id}"]`)) return;
+    const el = createHistoryElement(item);
+    if(animate){
+      // ensure animation runs
+      el.style.opacity='0';
+      el.style.transform='translateY(8px)';
+      historyListEl.insertBefore(el, historyListEl.firstChild);
+      // force reflow then remove transform for animation
+      requestAnimationFrame(()=> {
+        el.style.transition = 'all .28s';
+        el.style.opacity='1';
+        el.style.transform = 'none';
+      });
+    } else {
+      insertDomItemSorted(el, item);
+    }
+  }
+
+  function updateHistoryInUI(item){
+    const existing = historyListEl.querySelector(`[data-id="${item.id}"]`);
+    if(!existing){
+      addHistoryToUI(item, false);
+      return;
+    }
+    // Replace innerHTML for modified item
+    const newEl = createHistoryElement(item);
+    existing.replaceWith(newEl);
+  }
+
+  function removeHistoryFromUI(id){
+    const el = historyListEl.querySelector(`[data-id="${id}"]`);
+    if(el) el.remove();
+    historyCacheMap.delete(id);
+    // if now empty, show "No history yet"
+    if(historyListEl.children.length===0){
+      const noEl = document.createElement('div');
+      noEl.className='hist-item muted';
+      noEl.style.justifyContent='center';
+      noEl.style.textAlign='center';
+      noEl.textContent='No history yet';
+      historyListEl.appendChild(noEl);
+    }
+  }
+
+  function setFilter(f){
+    activeFilter = f;
+    filterAllBtn.classList.toggle('active', f==='all');
+    filterWinsBtn.classList.toggle('active', f==='wins');
+    filterLossesBtn.classList.toggle('active', f==='losses');
+
+    // Rebuild visible list from map according to filter and newest-first order
+    historyListEl.innerHTML = '';
+    const arr = Array.from(historyCacheMap.values()).sort((a,b)=> (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+    const filtered = arr.filter(shouldShowByFilter);
+    if(filtered.length===0){
+      const noEl = document.createElement('div');
+      noEl.className='hist-item muted';
+      noEl.style.justifyContent='center';
+      noEl.style.textAlign='center';
+      noEl.textContent='No history yet';
+      historyListEl.appendChild(noEl);
+      return;
+    }
+    filtered.forEach(it=>{
+      const el = createHistoryElement(it);
+      historyListEl.appendChild(el);
+    });
+  }
+
+  filterAllBtn.addEventListener('click', ()=>setFilter('all'));
+  filterWinsBtn.addEventListener('click', ()=>setFilter('wins'));
+  filterLossesBtn.addEventListener('click', ()=>setFilter('losses'));
+
+  // --- Auth & initialization ---
+  onAuthStateChanged(auth, async (user)=>{
+    if(!user){ window.location.href="index.html"; return; }
+    currentUser=user;
+    displayEmail.textContent=user.email;
+
+    const userRef=doc(db,'users',user.uid);
+    const uSnap=await getDoc(userRef);
+    if(!uSnap.exists()) await setDoc(userRef,{email:user.email,name:user.email.split('@')[0],wallet:0});
+    else walletEl.textContent=uSnap.data().wallet??0;
+
+    onSnapshot(userRef,(snap)=>{ if(snap.exists()) walletEl.textContent=snap.data().wallet??0; });
+
+    const roundRef=doc(db,'currentRound','main');
+    const roundSnap=await getDoc(roundRef);
+    if(!roundSnap.exists()) await setDoc(roundRef,{round:1,endTime:Date.now()+60000});
+    onSnapshot(roundRef,(snap)=>{
+      if(!snap.exists()) return;
+      const data=snap.data();
+      currentRound.round=data.round??1;
+      currentRound.endMs=data.endTime?.toMillis?data.endTime.toMillis():Number(data.endTime)||Date.now()+60000;
+      roundNoEl.textContent=currentRound.round;
+      startTimer(currentRound.endMs);
+    });
+
+    const declareFlagRef=doc(db,"results","declareFlag");
+    onSnapshot(declareFlagRef, async (flagSnap)=>{
+      if(!flagSnap.exists()) return;
+      const flag=flagSnap.data();
+      const declared=flag.declared===true;
+      const at=Number(flag.at)||0;
+      if(!declared) return;
+      if(at<=lastHandledFlagAt) return;
+
+      try{
+        const latestSnap=await getDoc(doc(db,"results","latest"));
+        if(!latestSnap.exists()) return;
+        const data=latestSnap.data();
+        const winner=data.color;
+        const round=data.round??null;
+        lastResultEl.textContent=`${winner?.toUpperCase()??"—"} (Round ${round??"—"})`;
+        // Process user bets for this round: show popup + write history docs
+        await processUserBetsAndWriteHistory(round, winner);
+        lastHandledFlagAt=at;
+        sessionStorage.setItem('lastHandledFlagAt',String(at));
+      }catch(e){ console.error("Error processing declared result:", e); }
+    });
+
+    // Existing bets snapshot (kept minimal)
+    const histQ=query(collection(db,'bets'),where('userId','==',currentUser.uid),orderBy('timestamp','desc'));
+    onSnapshot(histQ,(snap)=>{
+      // intentionally left minimal to avoid UI duplication
+    });
+
+    // Listen to user's history subcollection realtime
+    const userHistoryCol = collection(db, 'users', currentUser.uid, 'history');
+    const userHistQ = query(userHistoryCol, orderBy('timestamp','desc'));
+    // IMPORTANT: use docChanges to only process incremental deltas (added/modified/removed)
+    onSnapshot(userHistQ, (snap) => {
+      // Process document changes incrementally
+      const changes = snap.docChanges();
+      if(changes.length===0) return;
+      // If this was the first snapshot, we'll populate map from docs but avoid animations for existing
+      const isInitial = snap.metadata.hasPendingWrites === false && historyCacheMap.size===0;
+      changes.forEach(change => {
+        const id = change.doc.id;
+        const v = change.doc.data();
+        const item = {
+          id,
+          amount: v.amount,
+          color: v.color,
+          round: v.round,
+          result: v.result,
+          winAmount: v.winAmount,
+          timestamp: v.timestamp
+        };
+        if(change.type === 'added'){
+          // add to map
+          historyCacheMap.set(id, item);
+          // show animation only if not initial snapshot
+          const animate = !isInitial;
+          addHistoryToUI(item, animate);
+        } else if(change.type === 'modified'){
+          historyCacheMap.set(id, item);
+          updateHistoryInUI(item);
+        } else if(change.type === 'removed'){
+          removeHistoryFromUI(id);
+        }
+      });
+      // if it was initial and we populated map via changes, ensure UI shows all (no animations)
+      if(isInitial && historyCacheMap.size>0){
+        // rebuild UI once
+        setFilter(activeFilter); // this will re-render visible items without animations
+      }
+    });
+  });
+
+  function startTimer(endMs){
+    if(timerInterval) clearInterval(timerInterval);
+    function tick(){
+      const diff=Math.max(0,Math.floor((endMs-Date.now())/1000));
+      timeLeftEl.textContent=diff;
+      betRedBtn.disabled=betGreenBtn.disabled=diff<=0;
+      if(diff<=0) clearInterval(timerInterval);
+    }
+    tick();
+    timerInterval=setInterval(tick,1000);
+  }
+
+  async function placeBet(color){
+    try{
+      const amt=Number(betAmountEl.value);
+      if(!amt||amt<=0) return alert('Enter valid amount');
+      const userRef=doc(db,'users',currentUser.uid);
+      const userSnap=await getDoc(userRef);
+      const wallet=userSnap.exists()?Number(userSnap.data().wallet||0):0;
+      if(wallet<amt) return alert('Insufficient balance');
+      await updateDoc(userRef,{wallet:wallet-amt});
+      await addDoc(collection(db,'bets'),{
+        userId:currentUser.uid,userEmail:currentUser.email,color,amount:amt,
+        round:currentRound.round??1,status:'pending',timestamp:serverTimestamp()
+      });
+      betAmountEl.value='';
+      showPopup(`Bet placed ₹${amt} on ${color}`, true);
+    }catch(e){ console.error(e); alert('Error placing bet: '+e.message); }
+  }
+
+  betRedBtn.addEventListener('click',()=>placeBet('red'));
+  betGreenBtn.addEventListener('click',()=>placeBet('green'));
+
+  // Process bets for declared round, show popup(s) and write history docs under users/{uid}/history/{betId}
+  // FIX: idempotent write — check if history exists for betId before writing
+  async function processUserBetsAndWriteHistory(round, winner){
+    try{
+      if(!currentUser) return;
+      if(!round) return;
+      // fetch all bets for this round for current user
+      const q = query(collection(db,'bets'), where('userId','==', currentUser.uid), where('round','==', round));
+      const snap = await getDocs(q);
+      if(snap.empty){
+        // nothing to do for this user
+        return;
+      }
+      for(const d of snap.docs){
+        const bet = d.data();
+        const betId = d.id;
+        const betColor = (bet.color||'').toString().toLowerCase();
+        const amount = Number(bet.amount||0);
+        const isWin = betColor === (winner||'').toString().toLowerCase();
+        const winAmount = isWin ? (amount * 2) : 0;
+
+        try{
+          // Check if history doc already exists — prevents duplicates and re-processing
+          const historyRef = doc(db, 'users', currentUser.uid, 'history', betId);
+          const historySnap = await getDoc(historyRef);
+          if(historySnap.exists()){
+            // already processed — skip
+            console.log(`History already exists for bet ${betId}, skipping write.`);
+            continue;
+          }
+
+          // Write history document under users/{uid}/history/{betId}
+          await setDoc(historyRef, {
+            betId,
+            amount,
+            color: betColor,
+            round,
+            result: isWin ? 'win' : 'lose',
+            winAmount,
+            timestamp: serverTimestamp()
+          });
+
+          // Show popup for this user (only after write is requested - popup will show once snapshot 'added' arrives)
+          // We avoid showing popup here to rely on onSnapshot('added') for consistent behavior across clients.
+          // However, to ensure immediate UX feedback for this client, we also show it now:
+          if(isWin) showPopup(`You WON ₹${winAmount} on ${winner}`, true);
+          else showPopup(`You LOST ₹${amount} on ${bet.color}`, false);
+
+          // Update the bet doc to mark it as settled (so server/client know it's processed)
+          try{
+            const betDocRef = doc(db, 'bets', betId);
+            const existingStatus = bet.status||'';
+            if(existingStatus !== 'win' && existingStatus !== 'lose' && existingStatus !== 'settled'){
+              await updateDoc(betDocRef, { status: isWin ? 'win' : 'lose', settledAt: serverTimestamp() });
+            }
+          }catch(updateErr){
+            console.warn('Failed to update bet status (non-fatal):', updateErr);
+          }
+
+        }catch(innerErr){
+          console.error('Error handling single bet in processUserBetsAndWriteHistory:', innerErr);
+        }
+      }
+    }catch(e){
+      console.error('Error in processUserBetsAndWriteHistory:', e);
+    }
+  }
+
+  // Clear history for current user (deletes all docs in users/{uid}/history)
+  clearHistoryBtn.addEventListener('click', async ()=>{
+    if(!currentUser) return alert('Not signed in');
+    if(!confirm('Are you sure you want to clear your history? This cannot be undone.')) return;
+    try{
+      const histCol = collection(db, 'users', currentUser.uid, 'history');
+      const snap = await getDocs(histCol);
+      const deletes = [];
+      snap.forEach(d=>{
+        deletes.push(deleteDoc(doc(db, 'users', currentUser.uid, 'history', d.id)));
+      });
+      await Promise.all(deletes);
+      showPopup('History cleared', true);
+      // onSnapshot listener will remove items from UI via 'removed' changes
+    }catch(e){ console.error(e); alert('Error clearing history: ' + e.message); }
+  });
+
+  sendDepositBtn.addEventListener('click', async ()=>{
+    const amt=Number(depAmount.value), phone=depPhone.value.trim(), utr=depUtr.value.trim();
+    const sName = depSenderName.value.trim(); // 🔥 READ SENDER NAME
+
+    if(!amt||!phone||!utr||!sName) return alert('Fill all deposit fields (Amount, Phone, UTR, Sender Name)');
+    
+    try{
+      // 🔥 SEND SENDER NAME TO DB
+      await addDoc(collection(db,'depositRequests'),{
+        userId:currentUser.uid,
+        userEmail:currentUser.email,
+        amount:amt,
+        phone,
+        utr,
+        senderName: sName, 
+        status:'pending',
+        timestamp:serverTimestamp()
+      });
+      depAmount.value=depPhone.value=depUtr.value=depSenderName.value='';
+      showPopup('Deposit request sent', true);
+    }catch(e){ console.error(e); alert('Error: '+e.message); }
+  });
+
+  sendWithdrawBtn.addEventListener('click', async ()=>{
+    const amt=Number(withAmount.value), phone=withPhone.value.trim(), upi=withUpi.value.trim();
+    if(!amt||!phone) return alert('Fill withdraw fields');
+    try{
+      const userRef=doc(db,'users',currentUser.uid);
+      const withdrawCol=collection(db,'withdrawRequests');
+      const userSnap=await getDoc(userRef);
+      if(!userSnap.exists()) return alert('User record not found');
+      const wallet=Number(userSnap.data().wallet||0);
+      if(wallet<amt) return alert('Insufficient balance');
+      await updateDoc(userRef,{wallet:wallet-amt});
+      await addDoc(withdrawCol,{userId:currentUser.uid,userEmail:currentUser.email,amount:amt,phone,upi,status:'pending',refunded:false,timestamp:serverTimestamp()});
+      withAmount.value=withPhone.value=withUpi.value='';
+      showPopup('Withdraw request sent', true);
+    }catch(e){ console.error(e); alert('Error: '+e.message); }
+  });
+
+  logoutBtn.addEventListener('click',()=>signOut(auth));
+</script>
+
+</body>
+</html>
